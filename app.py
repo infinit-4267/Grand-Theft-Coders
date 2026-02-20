@@ -1,180 +1,113 @@
 import streamlit as st
-import random
 import json
 import os
+import random
 import string
 
-# 1. Page Configuration
-st.set_page_config(page_title="Vice City Reputation Engine", layout="wide")
-
-# --- DATABASE HELPERS ---
+# --- DB FUNCTIONS ---
 DB_FILE = "users.json"
 
-def load_users():
+def load_data():
     if os.path.exists(DB_FILE):
         with open(DB_FILE, "r") as f:
             return json.load(f)
     return {}
 
-def save_users(users):
+def save_data(data):
     with open(DB_FILE, "w") as f:
-        json.dump(users, f, indent=4)
+        json.dump(data, f, indent=4)
 
-def generate_account_code():
-    # Generates a unique "Gangster ID" like VC-X89L2
-    return "VC-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+# --- INITIALIZE SESSION ---
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-# --- CSS STYLING (Black Background & Neon Accents) ---
+# --- UI CUSTOMIZATION ---
 st.markdown("""
 <style>
-/* Force Black Background for the entire app */
-.stApp {
-    background-color: #000000;
-}
-html, body, [class*="css"] {
-    background-color: #000000;
-    color: white;
-}
-h1 {
-    color: #ff00aa;
-    text-align: center;
-    font-size: 60px;
-    text-shadow: 0 0 10px #ff00aa, 0 0 20px #00ffff;
-}
-h3 {
-    color: #00ffff;
-}
-/* Neon Buttons */
-div.stButton > button {
-    background-color: black;
-    color: #00ffff;
-    border: 2px solid #ff00aa;
-    border-radius: 10px;
-    font-weight: bold;
-    width: 100%;
-    transition: 0.3s;
-}
-div.stButton > button:hover {
-    border-color: #00ffff;
-    color: #ff00aa;
-    box-shadow: 0 0 15px #ff00aa;
-}
-/* Profile Card Styling */
-.profile-card {
-    border: 1px solid #ff00aa;
-    padding: 15px;
-    border-radius: 10px;
-    background: rgba(255, 0, 170, 0.05);
-}
+    .stApp { background-color: #0d0221; color: white; }
+    .stats-card {
+        padding: 20px; border-radius: 10px; text-align: center; border: 2px solid;
+        background: rgba(0,0,0,0.3);
+    }
+    .available { border-color: #00ffff; box-shadow: 0 0 10px #00ffff; }
+    .active { border-color: #ff00aa; box-shadow: 0 0 10px #ff00aa; }
+    .profile-sidebar {
+        border: 1px solid #ff00aa; padding: 15px; border-radius: 10px;
+        background: rgba(255, 0, 170, 0.1); text-align: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION INITIALIZATION ---
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "current_user" not in st.session_state:
-    st.session_state.current_user = None
-
-# Load the permanent database
-users_db = load_users()
-
-# --- SCREEN 1: THE LOGIN/SIGNUP GATE ---
+# --- LOGIN SCREEN ---
 if not st.session_state.logged_in:
-    st.markdown("<h1>🌴 VICE CITY GATEWAY</h1>", unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    
-    with col2:
-        # Toggle between Login and Signup
-        mode = st.radio("SELECT PROTOCOL", ["LOGIN", "CREATE ACCOUNT"], horizontal=True)
-        st.divider()
+    # (Insert your login/signup logic here from previous steps)
+    st.title("🌴 VICE CITY LOGIN")
+    user_db = load_data()
+    user_name = st.text_input("Operator ID")
+    if st.button("ENTER CITY"):
+        if user_name in user_db:
+            st.session_state.logged_in = True
+            st.session_state.current_user = user_name
+            st.rerun()
 
-        if mode == "LOGIN":
-            user_input = st.text_input("OPERATOR ID")
-            pw_input = st.text_input("SECURITY CIPHER", type="password")
-            
-            if st.button("INITIALIZE SESSION"):
-                if user_input in users_db and users_db[user_input]["password"] == pw_input:
-                    st.session_state.logged_in = True
-                    st.session_state.current_user = user_input
-                    st.rerun()
-                else:
-                    st.error("ACCESS DENIED: Credentials Invalid")
-        
-        else:
-            st.markdown("<small style='color:#00ffff;'>Enter details to generate your unique city code.</small>", unsafe_allow_html=True)
-            new_user = st.text_input("CHOOSE OPERATOR NAME")
-            new_pw = st.text_input("SET CIPHER", type="password")
-            
-            if st.button("GENERATE ID & REGISTER"):
-                if new_user in users_db:
-                    st.warning("Operator ID already taken.")
-                elif new_user and new_pw:
-                    code = generate_account_code()
-                    users_db[new_user] = {
-                        "password": new_pw,
-                        "respect": 50,
-                        "code": code
-                    }
-                    save_users(users_db)
-                    st.success(f"WELCOME TO THE FAMILY! Your Unique ID is: {code}")
-                    st.info("You can now switch to LOGIN to enter.")
-                else:
-                    st.error("The Boss requires a name and a cipher.")
-
-# --- SCREEN 2: THE MAIN REPUTATION ENGINE ---
+# --- MAIN DASHBOARD ---
 else:
-    # Get current user data from the DB
-    user_data = users_db[st.session_state.current_user]
+    user_db = load_data()
+    user_name = st.session_state.current_user
+    user_data = user_db[user_name]
     
-    # Sidebar: Profile & Missions
-    st.sidebar.markdown(f"## 👤 {st.session_state.current_user}")
-    
-    # Profile Access (Expander acts as a pop-up profile)
-    with st.sidebar.expander("📂 VIEW OPERATOR PROFILE"):
+    # Update mission counts for display
+    active_m = user_data.get("active_missions", 0)
+    completed_m = user_data.get("completed_missions", 0)
+
+    # 1. SIDEBAR PROFILE
+    with st.sidebar:
         st.markdown(f"""
-        <div class="profile-card">
-        <p style="color:#00ffff; margin-bottom:5px;"><b>ID CODE:</b> {user_data['code']}</p>
-        <p style="color:#ff00aa; margin-bottom:5px;"><b>RANK:</b> Street Associate</p>
-        <p style="color:white; margin-bottom:5px;"><b>CURRENT RESPECT:</b> {user_data['respect']}</p>
+        <div class="profile-sidebar">
+            <h2 style="color:#ff00aa; margin:0;">{user_name.upper()}</h2>
+            <p style="color:#00ffff; font-size:12px;">CODE: {user_data.get('code', 'N/A')}</p>
+            <hr>
+            <p><b>RESPECT:</b> {user_data.get('respect', 50)}</p>
         </div>
         """, unsafe_allow_html=True)
-    
-    st.sidebar.divider()
-    
-    st.sidebar.header("🎯 MISSIONS")
-    if st.sidebar.button("Secure Perimeter (+10 Respect)"):
-        users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 10, 100)
-        save_users(users_db)
-        st.rerun()
-    
-    if st.sidebar.button("Spread Misinformation (-20 Respect)"):
-        users_db[st.session_state.current_user]["respect"] = max(user_data["respect"] - 20, 0)
-        save_users(users_db)
-        st.rerun()
+        
+        if st.button("LOGOUT"):
+            st.session_state.logged_in = False
+            st.rerun()
 
-    if st.sidebar.button("LOGOUT"):
-        st.session_state.logged_in = False
-        st.session_state.current_user = None
-        st.rerun()
-
-    # Main Dashboard
-    try:
-        st.image("Grand20Coders.png", use_column_width=True)
-    except:
-        st.info("Header image not found.")
-
-    st.markdown(f"<h1>🌴 Reputation Engine</h1>", unsafe_allow_html=True)
+    # 2. HEADER
+    st.markdown("<h1 style='text-align:center;'>🎯 VICE CITY MISSIONS</h1>", unsafe_allow_html=True)
     
-    # Respect Display
-    st.markdown(f"<h3>Status: {st.session_state.current_user}</h3>", unsafe_allow_html=True)
-    st.progress(user_data["respect"] / 100)
-    st.write(f"Respect Points: {user_data['respect']}")
+    # 3. STATS ROW
+    c1, c2, c3 = st.columns(3)
+    c1.markdown(f'<div class="stats-card available"><h3>12</h3><p>AVAILABLE</p></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="stats-card active"><h3>{active_m}</h3><p>ACTIVE</p></div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="stats-card completed" style="border-color:#00ffaa;"><h3>{completed_m}</h3><p>DONE</p></div>', unsafe_allow_html=True)
 
-    # Logic-based Access Levels
-    if user_data["respect"] >= 80:
-        st.success("ACCESS LEVEL: GOLD ZONE")
-    elif user_data["respect"] >= 50:
-        st.warning("ACCESS LEVEL: SILVER ZONE")
-    else:
-        st.error("ACCESS LEVEL: RESTRICTED")
+    # 4. MISSIONS
+    st.divider()
+    m_col1, m_col2 = st.columns(2)
+
+    with m_col1:
+        with st.container(border=True):
+            st.subheader("🧹 BEACH CLEANUP")
+            st.write("Respect Gain: +10")
+            if st.button("ACCEPT MISSION"):
+                user_db[user_name]["active_missions"] = active_m + 1
+                user_db[user_name]["respect"] = min(user_data["respect"] + 10, 100)
+                save_data(user_db)
+                st.toast("Database Updated!")
+                st.rerun()
+
+    with m_col2:
+        with st.container(border=True):
+            st.subheader("🍔 FOOD DISTRIBUTION")
+            st.write("Respect Gain: +5")
+            if st.button("COMPLETE MISSION"):
+                if active_m > 0:
+                    user_db[user_name]["active_missions"] = active_m - 1
+                    user_db[user_name]["completed_missions"] = completed_m + 1
+                    save_data(user_db)
+                    st.rerun()
+                else:
+                    st.error("No active missions to complete!")
