@@ -35,3 +35,4 @@ saved_model/**/* filter=lfs diff=lfs merge=lfs -text
 *tfevents* filter=lfs diff=lfs merge=lfs -text
 Grand[[:space:]]Theft[[:space:]]Coders.png filter=lfs diff=lfs merge=lfs -text
 map.jpg filter=lfs diff=lfs merge=lfs -text
+background.png filter=lfs diff=lfs merge=lfs -text
