@@ -6,7 +6,7 @@ import string
 from PIL import Image, ImageDraw
 
 # 1. Page Configuration
-st.set_page_config(page_title="Vice City Intelligence", layout="wide")
+st.set_page_config(page_title="Vice City Reputation Engine", layout="wide")
 
 # --- DATABASE HELPERS ---
 DB_FILE = "users.json"
@@ -24,7 +24,7 @@ def save_users(users):
 def generate_account_code():
     return "VC-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
 
-# --- CSS STYLING (The Neon Briefing Look) ---
+# --- CSS STYLING (The Neon Look) ---
 st.markdown("""
 <style>
     .stApp { background-color: #0d0221; color: white; }
@@ -32,31 +32,34 @@ st.markdown("""
     
     /* Stats Cards */
     .stats-card {
-        padding: 25px; border-radius: 15px; text-align: center; border: 2px solid;
-        background: rgba(0,0,0,0.5); height: 160px;
+        padding: 20px; border-radius: 10px; text-align: center; border: 2px solid;
+        background: rgba(0,0,0,0.3);
     }
     .available { border-color: #00ffff; box-shadow: 0 0 10px #00ffff; }
     .active { border-color: #ff00aa; box-shadow: 0 0 10px #ff00aa; }
     .completed { border-color: #00ffaa; box-shadow: 0 0 10px #00ffaa; }
-
-    /* Mission Briefing (Pink Box) */
-    .briefing-box {
-        background: rgba(255, 0, 170, 0.12); border-left: 5px solid #ff00aa;
-        padding: 15px; margin: 15px 0; font-size: 14px; border-radius: 4px;
-    }
-
+    /* Mission Cards */
+    .badge { padding: 2px 8px; border-radius: 20px; font-size: 12px; border: 1px solid; }
+    .easy { color: #00ffaa; border-color: #00ffaa; }
+    .medium { color: #ffaa00; border-color: #ffaa00; }
+    
     /* Buttons */
     div.stButton > button {
         background-color: black; color: #00ffff; border: 2px solid #ff00aa;
         border-radius: 10px; font-weight: bold; width: 100%;
     }
-    
-    .profile-card {
-        border: 2px solid #ff00aa; padding: 20px; border-radius: 15px;
-        background: rgba(0,0,0,0.6); text-align: center;
-    }
 </style>
 """, unsafe_allow_html=True)
+# --- SESSION INITIALIZATION ---
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# [NEW] Initialize the crime list if it doesn't exist
+if "active_crimes" not in st.session_state:
+    st.session_state.active_crimes = [
+        {"name": "Downtown", "x": 0.425, "y": 0.680, "type": "Drug Deal"},
+        {"name": "Port of Miami", "x": 0.810, "y": 0.730, "type": "Smuggling"}
+    ]
 
 # --- SESSION INITIALIZATION ---
 if "logged_in" not in st.session_state:
@@ -64,114 +67,176 @@ if "logged_in" not in st.session_state:
 
 users_db = load_users()
 
-# --- LOGIN SCREEN ---
+# --- SCREEN 1: THE LOGIN/SIGNUP GATE ---
 if not st.session_state.logged_in:
     st.markdown("<h1>🌴 VICE CITY GATEWAY</h1>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         mode = st.radio("SELECT PROTOCOL", ["LOGIN", "CREATE ACCOUNT"], horizontal=True)
-        user_input = st.text_input("OPERATOR ID")
-        pw_input = st.text_input("SECURITY CIPHER", type="password")
-        if st.button("INITIALIZE SESSION"):
-            if user_input in users_db and users_db[user_input]["password"] == pw_input:
-                st.session_state.logged_in = True
-                st.session_state.current_user = user_input
-                st.rerun()
-            else: st.error("ACCESS DENIED")
-        else:
-            if mode == "CREATE ACCOUNT":
-                new_user = st.text_input("CHOOSE OPERATOR NAME", key="new_user")
-                new_pw = st.text_input("SET CIPHER", type="password", key="new_pw")
-                if st.button("GENERATE ID & REGISTER"):
-                    if new_user and new_pw and new_user not in users_db:
-                        code = generate_account_code()
-                        users_db[new_user] = {"password": new_pw, "respect": 50, "code": code, "active": 0, "done": 0, "reports": []}
-                        save_users(users_db)
-                        st.success(f"ID GENERATED: {code}")
-
-# --- MAIN ENGINE ---
-else:
-    user_name = st.session_state.current_user
-    user_data = users_db[user_name]
-    
-    # 1. SIDEBAR PROFILE HUB
-    with st.sidebar:
-        st.markdown(f"""
-        <div class="profile-card">
-            <h2 style="color:#ff00aa; margin:0;">{user_name.upper()}</h2>
-            <p style="color:#00ffff; font-size:12px;">ID: {user_data.get('code', 'N/A')}</p>
-            <hr>
-            <p style="text-align:left;"><b>RANK:</b> Street Associate</p>
-            <p style="text-align:left;"><b>RESPECT:</b> {user_data.get('respect', 50)}%</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # New: View Past Reports in Sidebar
-        with st.expander("📜 MY INTEL LOGS"):
-            reports = user_data.get("reports", [])
-            if reports:
-                for r in reports:
-                    st.markdown(f"📍 **{r['district']}**\n- {r['type']}")
-            else:
-                st.write("No reports filed yet.")
-        
-        st.divider()
-        if st.button("LOGOUT"):
-            st.session_state.logged_in = False
-            st.rerun()
-
-    # 2. DASHBOARD HEADER
-    st.markdown("<h1>🎯 VICE CITY MISSIONS</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#00ffff;'>COMMUNITY MISSIONS · YOUR CHOICE · REAL IMPACT</p>", unsafe_allow_html=True)
-    st.info("⚠️ ALL MISSIONS ARE VOLUNTARY · YOUR CHOICE MATTERS")
-
-    # 3. STATS ROW
-    s1, s2, s3 = st.columns(3)
-    s1.markdown('<div class="stats-card available"><h1 style="color:#00ffff; margin:0;">12</h1><p>AVAILABLE</p></div>', unsafe_allow_html=True)
-    s2.markdown(f'<div class="stats-card active"><h1 style="color:#ff00aa; margin:0;">{user_data.get("active", 0)}</h1><p>ACTIVE</p></div>', unsafe_allow_html=True)
-    s3.markdown(f'<div class="stats-card completed"><h1 style="color:#00ffaa; margin:0;">{user_data.get("done", 0)}</h1><p>COMPLETED</p></div>', unsafe_allow_html=True)
-
-    # 4. REPORT A CRIME
-    st.divider()
-    st.markdown("### 🚨 REPORT CRIMINAL ACTIVITY")
-    with st.container(border=True):
-        crime_col1, crime_col2 = st.columns(2)
-        with crime_col1:
-            report_district = st.selectbox("Incident Location", ["Downtown", "Ocean Beach", "Little Havana", "Vice Point", "Port of Miami"])
-            report_type = st.selectbox("Crime Type", ["Vandalism", "Theft", "Suspicious Activity", "Street Racing", "Smuggling"])
-        with crime_col2:
-            report_details = st.text_area("Intel Details", placeholder="What did you see, operator?")
-            if st.button("SUBMIT REPORT TO VERCETTI BUREAU"):
-                if report_details:
-                    new_report = {"district": report_district, "type": report_type, "details": report_details}
-                    if "reports" not in users_db[user_name]:
-                        users_db[user_name]["reports"] = []
-                    users_db[user_name]["reports"].append(new_report)
-                    users_db[user_name]["respect"] = min(user_data["respect"] + 2, 100) # Loyalty bonus
-                    save_users(users_db)
-                    st.toast("Intel Submitted! Respect +2")
+        if mode == "LOGIN":
+            user_input = st.text_input("OPERATOR ID")
+            pw_input = st.text_input("SECURITY CIPHER", type="password")
+            if st.button("INITIALIZE SESSION"):
+                if user_input in users_db and users_db[user_input]["password"] == pw_input:
+                    st.session_state.logged_in = True
+                    st.session_state.current_user = user_input
                     st.rerun()
                 else:
-                    st.error("Briefing details required for processing.")
+                    st.error("ACCESS DENIED")
+        else:
+            new_user = st.text_input("CHOOSE OPERATOR NAME")
+            new_pw = st.text_input("SET CIPHER", type="password")
+            if st.button("GENERATE ID & REGISTER"):
+                if new_user and new_pw and new_user not in users_db:
+                    code = generate_account_code()
+                    users_db[new_user] = {"password": new_pw, "respect": 50, "code": code, "active": 0, "done": 0}
+                    save_users(users_db)
+                    st.success(f"ID GENERATED: {code}")
+# --- SCREEN 2: THE MAIN REPUTATION ENGINE ---
+else:
+    user_data = users_db[st.session_state.current_user]
+    
+    # Sidebar Profile
+    st.sidebar.markdown(f"## 👤 {st.session_state.current_user}")
+    with st.sidebar.expander("📂 VIEW OPERATOR PROFILE"):
+        st.markdown(f"**ID:** `{user_data['code']}`")
+        st.markdown(f"**RANK:** Street Associate")
+        st.markdown(f"**RESPECT:** {user_data['respect']}")
+    
+    if st.sidebar.button("LOGOUT"):
+        st.session_state.logged_in = False
+        st.rerun()
 
-    # 5. MISSION GRID
-    st.markdown("<h2 style='color:#00ffff; margin-top:30px;'>🎯 AVAILABLE MISSIONS</h2>", unsafe_allow_html=True)
+    # Dashboard Header
+    st.markdown("<h1>🎯 VICE CITY MISSIONS</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>COMMUNITY MISSIONS · YOUR CHOICE · REAL IMPACT</p>", unsafe_allow_html=True)
+    st.info("⚠️ ALL MISSIONS ARE VOLUNTARY · YOUR CHOICE MATTERS")
+    # --- [NEW] CRIME TRACKER LOGIC ---
+    districts = {
+        "Downtown / Bayfront": {"x": 0.425, "y": 0.680, "crime": "Active: Drug Deal"},
+        "Bayside Marketplace": {"x": 0.385, "y": 0.585, "crime": "Active: Shoplifting"},
+        "Port of Miami": {"x": 0.810, "y": 0.730, "crime": "Active: Smuggling"},
+        "Watson Island": {"x": 0.740, "y": 0.350, "crime": "Active: Street Race"},
+        "Overtown": {"x": 0.150, "y": 0.220, "crime": "Active: Grand Theft Auto"},
+    }
+
+    def draw_intel_map():
+        try:
+            base_map = Image.open("map.jpg").convert("RGBA")
+        except:
+            base_map = Image.new("RGBA", (1654, 1169), (20, 20, 20))
+        
+        draw = ImageDraw.Draw(base_map)
+        w, h = base_map.size
+        
+        # Loop through the functional session state list
+        for crime in st.session_state.active_crimes:
+            px, py = crime['x'] * w, crime['y'] * h
+            pin_color = (255, 0, 170, 255) 
+            
+            # Draw Pin
+            r = 15
+            draw.ellipse([px-r, py-r*3, px+r, py-r], fill=pin_color, outline="white", width=2)
+            draw.polygon([(px-r, py-r*2), (px+r, py-r*2), (px, py)], fill=pin_color, outline="white")
+            draw.ellipse([px-5, py-r*2-5, px+5, py-r*2+5], fill="white")
+
+            # Label
+            draw.text((px + 20, py - 30), f"{crime['name'].upper()}\nREPORT: {crime['type'].upper()}", fill="white")
+        return base_map
+    # Stats Row
+    c1, c2, c3 = st.columns(3)
+    c1.markdown(f'<div class="stats-card available"><h3>12</h3><p>AVAILABLE</p></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="stats-card active"><h3>{user_data.get("active", 0)}</h3><p>ACTIVE</p></div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="stats-card completed"><h3>{user_data.get("done", 0)}</h3><p>COMPLETED</p></div>', unsafe_allow_html=True)
+
+    # Categories
+    st.markdown("### ⭐ MISSION CATEGORIES")
+    cat_cols = st.columns(6)
+    cats = ["ALL MISSIONS", "COMMUNITY", "ENVIRONMENT", "EDUCATION", "SAFETY", "HEALTH"]
+    for i, cat in enumerate(cats):
+        cat_cols[i].button(cat, key=f"cat_{i}")
+
+    # Mission Cards
+    st.markdown("### 🎯 AVAILABLE MISSIONS")
     m1, m2, m3 = st.columns(3)
 
-    def draw_mission(col, title, tag, diff, briefing, loc, time, ppl, key):
-        with col:
-            with st.container(border=True):
-                st.markdown(f"<span style='color:#00ffaa; border:1px solid #00ffaa; padding:2px 8px; border-radius:10px; font-size:10px;'>{diff}</span> <small>{tag}</small>", unsafe_allow_html=True)
-                st.subheader(title)
-                st.markdown(f"<div class='briefing-box'><b>MISSION BRIEFING:</b><br>{briefing}</div>", unsafe_allow_html=True)
-                st.markdown(f"📍 **{loc}** | ⏱ **{time}** | 👥 **{ppl} interested**")
-                if st.button("ACCEPT MISSION", key=key):
-                    users_db[user_name]["active"] += 1
-                    save_users(users_db)
-                    st.rerun()
+    with m1:
+        with st.container(border=True):
+            st.markdown("<span class='badge easy'>EASY</span> <small>ENVIRONMENT</small>", unsafe_allow_html=True)
+            st.subheader("BEACH CLEANUP")
+            st.write("Clean up the beachfront to protect marine life.")
+            if st.button("ACCEPT MISSION", key="m1_btn"):
+                users_db[st.session_state.current_user]["active"] += 1
+                users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 5, 100)
+                save_users(users_db)
+                st.rerun()
 
-    draw_mission(m1, "BEACH CLEANUP", "ENVIRONMENT", "EASY", "Shoreline pollution is peaking. Help us clear the sands.", "Ocean Beach", "2h", "34", "m1_rep")
-    draw_mission(m2, "FOOD DISTRIBUTION", "COMMUNITY", "EASY", "Help serve meals to the downtown community.", "Downtown", "3h", "45", "m2_rep")
-    draw_mission(m3, "CODING WORKSHOP", "EDUCATION", "MEDIUM", "Mentor local teens in basic Python logic.", "Tech Center", "4h", "12", "m3_rep")
+    with m2:
+        with st.container(border=True):
+            st.markdown("<span class='badge easy'>EASY</span> <small>COMMUNITY</small>", unsafe_allow_html=True)
+            st.subheader("FOOD DRIVE")
+            st.write("Distribute meals to members downtown.")
+            if st.button("ACCEPT MISSION", key="m2_btn"):
+                users_db[st.session_state.current_user]["active"] += 1
+                users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 5, 100)
+                save_users(users_db)
+                st.rerun()
 
-# Note: Ensure you have a 'map.jpg' in your directory for the Tactical Map feature.
+    with m3:
+        with st.container(border=True):
+            st.markdown("<span class='badge medium'>MEDIUM</span> <small>EDUCATION</small>", unsafe_allow_html=True)
+            st.subheader("CODING WORKSHOP")
+            st.write("Teach basic programming to local teenagers.")
+            if st.button("ACCEPT MISSION", key="m3_btn"):
+                users_db[st.session_state.current_user]["active"] += 1
+                users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 10, 100)
+                save_users(users_db)
+                st.rerun()
+    # --- [NEW] TACTICAL MAP DISPLAY ---
+    st.divider()
+    st.markdown("### 🚨 LIVE CRIMINAL ACTIVITY TRACKER")
+    
+    col_map_info, col_map_render = st.columns([1, 3])
+    
+    with col_map_info:
+        st.write("Vercetti Bureau Satellite Feed")
+        st.markdown("🔴 **Red Pins:** Active Crimes")
+        if st.button("RESCAN CITY SENSORS"):
+            st.rerun()
+
+    with col_map_render:
+        with st.spinner("Acquiring Satellite Lock..."):
+            crime_map = draw_intel_map()
+            st.image(crime_map, use_column_width=True, caption="VICE CITY CRIME FEED v1.0")
+    # --- [NEW] FUNCTIONAL REPORTING SYSTEM ---
+    st.divider()
+    st.markdown("### 📡 CRIME DISPATCH CONSOLE")
+    
+    col_input, col_map_render = st.columns([1, 3])
+    
+    with col_input:
+        st.write("Add Live Incident")
+        c_name = st.text_input("Location Name", placeholder="e.g. Malibu Club")
+        c_type = st.selectbox("Crime Type", ["Grand Theft Auto", "Drug Deal", "Robbery", "Vandalism"])
+        
+        # Coordinates - For the demo, you can use sliders or manual input
+        # Pro-tip: 0.5 is center
+        c_x = st.slider("X Coordinate", 0.0, 1.0, 0.5)
+        c_y = st.slider("Y Coordinate", 0.0, 1.0, 0.5)
+        
+        if st.button("🚨 BROADCAST REPORT"):
+            if c_name:
+                new_incident = {"name": c_name, "x": c_x, "y": c_y, "type": c_type}
+                st.session_state.active_crimes.append(new_incident)
+                st.toast(f"Dispatching units to {c_name}!")
+                st.rerun()
+            else:
+                st.error("Location name required!")
+
+        if st.button("🧹 CLEAR ALL REPORTS"):
+            st.session_state.active_crimes = []
+            st.rerun()
+
+    with col_map_render:
+        crime_map = draw_intel_map()
+        st.image(crime_map, use_column_width=True)
