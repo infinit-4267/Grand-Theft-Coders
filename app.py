@@ -43,6 +43,31 @@ div.stButton > button {
 }
 </style>
 """, unsafe_allow_html=True)
+# --- SESSION INITIALIZATION ---
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "respect" not in st.session_state:
+    st.session_state.respect = 50
+
+# --- SCREEN 1: THE LOGIN GATE ---
+if not st.session_state.logged_in:
+    st.markdown("<h1>🌴 VICE CITY GATEWAY</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align:center;'>Enter Cipher to Access Terminal</h3>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown('<div class="login-box">', unsafe_allow_html=True)
+        user = st.text_input("Operator ID")
+        pw = st.text_input("Security Cipher", type="password")
+        
+        if st.button("INITIALIZE SESSION"):
+            # Set your credentials here
+            if user == "admin" and pw == "vice84":
+                st.session_state.logged_in = True
+                st.rerun()
+            else:
+                st.error("ACCESS DENIED: Credentials Invalid")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # 4. 🏝 Main Content
 st.markdown("<h1>🌴 Vice City Reputation Engine</h1>", unsafe_allow_html=True)
