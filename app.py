@@ -14,12 +14,24 @@ DB_FILE = "users.json"
 GLOBAL_DB = "global_city_state.json"
 
 def load_json(file):
-    if os.path.exists(file):
-        with open(file, "r") as f: return json.load(f)
-    return {}
+    # Check if file exists and has content
+    if os.path.exists(file) and os.path.getsize(file) > 0:
+        try:
+            with open(file, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            # If the file is corrupted, return a default structure
+            return {"incidents": [], "players": {}}
+    
+    # If file doesn't exist or is empty, create the default structure
+    default_data = {"incidents": [], "players": {}}
+    if file == DB_FILE:
+        default_data = {} # users.json should be a dict
+    return default_data
 
 def save_json(file, data):
-    with open(file, "w") as f: json.dump(data, f, indent=4)
+    with open(file, "w") as f:
+        json.dump(data, f, indent=4)
 
 def generate_account_code():
     return "VC-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
