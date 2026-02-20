@@ -111,48 +111,65 @@ else:
     global_data["players"][st.session_state.current_user] = {"x": st.session_state.pos_x, "y": st.session_state.pos_y}
     save_json(GLOBAL_DB, global_data)
 
-    # --- TABS FOR FEATURES ---
-    tab1, tab2, tab3 = st.tabs(["🛰️ TACTICAL MAP", "🎯 MISSIONS", "🚨 REPORT INTEL"])
+# --- TABS FOR INTEGRATED FEATURES ---
+tab1, tab2, tab3 = st.tabs(["🛰️ TACTICAL MAP", "🎯 MISSIONS", "🚨 REPORT INTEL"])
 
-    with tab1:
-        st.markdown("### LIVE OPERATOR TRACKING")
-        def draw_map():
-            try: img = Image.open("map.jpg").convert("RGBA")
-            except: img = Image.new("RGBA", (1654, 1169), (20, 20, 20))
-            draw = ImageDraw.Draw(img)
-            for inc in global_data.get("incidents", []):
-                draw.ellipse([inc['x']-15, inc['y']-15, inc['x']+15, inc['y']+15], fill=(255, 0, 170))
-            draw.ellipse([st.session_state.pos_x-15, st.session_state.pos_y-15, st.session_state.pos_x+15, st.session_state.pos_y+15], fill="#00ffff", outline="white", width=3)
-            return img
-        st.image(draw_map(), use_column_width=True)
+with tab1:
+    st.markdown("### LIVE OPERATOR & INCIDENT TRACKING")
+    
+    def draw_combined_map():
+        # Load the latest shared data
+        current_intel = load_json(GLOBAL_DB)
         
-        # Proximity Logic
-        for inc in global_data.get("incidents", []):
-            dist = ((st.session_state.pos_x - inc['x'])**2 + (st.session_state.pos_y - inc['y'])**2)**0.5
-            if dist < 120:
-                st.error(f"🚨 NEARBY: {inc['type']}")
-                if st.button(f"VERIFY {inc['id']}"):
-                    st.success("VERIFIED. Truth Index +5")
+        try:
+            img = Image.open("map.jpg").convert("RGBA")
+        except:
+            img = Image.new("RGBA", (1654, 1169), (20, 20, 20))
+        
+        draw = ImageDraw.Draw(img)
+        
+        # 1. Track Other Operators (Live Feed)
+        for op_name, pos in current_intel.get("players", {}).items():
+            if op_name != st.session_state.current_user:
+                # Other operators show as subtle purple dots
+                draw.ellipse([pos['x']-10, pos['y']-10, pos['x']+10, pos['y']+10], fill=(150, 0, 255, 180))
+        
+        # 2. Track Incidents
+        for inc in current_intel.get("incidents", []):
+            # Pulse effect for active crimes
+            draw.ellipse([inc['x']-15, inc['y']-15, inc['x']+15, inc['y']+15], fill=(255, 0, 170), outline="white")
+        
+        # 3. Track Self (Your Live Position)
+        x, y = st.session_state.pos_x, st.session_state.pos_y
+        draw.ellipse([x-18, y-18, x+18, y+18], outline="#00ffff", width=4)
+        return img
 
-    with tab2:
-        st.markdown("### AVAILABLE MISSIONS")
-        m1, m2 = st.columns(2)
-        with m1:
-            st.markdown("<div class='briefing-box'><b>BEACH CLEANUP</b><br>Clear Ocean Beach. Reward: +5 Respect</div>", unsafe_allow_html=True)
-            if st.button("ACCEPT BEACH MISSION"): st.toast("Mission Active")
-        with m2:
-            st.markdown("<div class='briefing-box'><b>FOOD DRIVE</b><br>Serve Downtown. Reward: +5 Respect</div>", unsafe_allow_html=True)
-            if st.button("ACCEPT FOOD MISSION"): st.toast("Mission Active")
+    st.image(draw_combined_map(), use_column_width=True)
 
-    with tab3:
-        st.markdown("### BROADCAST INTEL")
-        i_type = st.selectbox("Type", ["Vandalism", "Theft", "Suspicious"])
-        i_desc = st.text_area("Details")
-        if st.button("SEND TO BUREAU"):
-            new_inc = {"id": f"INC-{random.randint(100,999)}", "type": i_type, "x": st.session_state.pos_x, "y": st.session_state.pos_y}
+with tab3:
+    st.markdown("### 📡 BROADCAST LOCAL INTEL")
+    st.info(f"Your Current Coordinates: ({st.session_state.pos_x}, {st.session_state.pos_y})")
+    
+    with st.form("dispatch_form"):
+        i_type = st.selectbox("INCIDENT TYPE", ["Vandalism", "Theft", "Suspicious Activity", "Misinformation Wave"])
+        i_details = st.text_area("INTEL BRIEFING", placeholder="Describe the activity at your current location...")
+        
+        if st.form_submit_button("BROADCAST TO ALL OPERATORS"):
+            # The 'Thinking' System: Attach user's truth index to the report
+            new_inc = {
+                "id": f"INC-{random.randint(1000, 9999)}",
+                "reporter": st.session_state.current_user,
+                "type": i_type,
+                "details": i_details,
+                "x": st.session_state.pos_x, # Integrated tracking coordinates
+                "y": st.session_state.pos_y,
+                "truth_index": user_data['truth_index']
+            }
+            
+            # Save to global state for multi-device sync
             global_data["incidents"].append(new_inc)
             save_json(GLOBAL_DB, global_data)
-            st.success("Incident Broadcasted at your current position!")
+            st.success("INTEL DISPATCHED. Nearby units will receive proximity alerts.")
 
     if st.sidebar.button("LOGOUT"):
         st.session_state.logged_in = False
