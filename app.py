@@ -5,7 +5,7 @@ import os
 import string
 
 # 1. Page Configuration
-st.set_page_config(page_title="Vice City Missions", layout="wide")
+st.set_page_config(page_title="Vice City Reputation Engine", layout="wide")
 
 # --- DATABASE HELPERS ---
 DB_FILE = "users.json"
@@ -20,50 +20,32 @@ def save_users(users):
     with open(DB_FILE, "w") as f:
         json.dump(users, f, indent=4)
 
-# --- CSS STYLING (Exact Match to Screenshots) ---
+def generate_account_code():
+    return "VC-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+
+# --- CSS STYLING (The Neon Look) ---
 st.markdown("""
 <style>
-    .stApp { background-color: #1a0b2e; color: white; }
+    .stApp { background-color: #0d0221; color: white; }
+    h1 { color: #ff00aa; text-align: center; text-shadow: 0 0 10px #ff00aa, 0 0 20px #00ffff; }
     
-    /* Header & Subtext */
-    .main-title {
-        color: #ff00ff; text-align: center; font-size: 50px; font-weight: bold;
-        text-shadow: 0 0 10px #ff00ff, 0 0 20px #00ffff; margin-bottom: 0px;
-    }
-    .sub-text { text-align: center; color: #00ffff; letter-spacing: 2px; font-size: 14px; margin-top: -10px; margin-bottom: 20px;}
-
-    /* Top Alert */
-    .alert-box {
-        border: 1px solid #ff00aa; border-radius: 8px; padding: 12px;
-        text-align: center; color: white; background: rgba(255, 0, 170, 0.1);
-        font-size: 13px; margin-bottom: 30px; font-weight: bold;
-    }
-
-    /* Stats Cards with Glow */
+    /* Stats Cards */
     .stats-card {
-        padding: 25px; border-radius: 15px; text-align: center; border: 2px solid;
-        background: rgba(0,0,0,0.5); transition: 0.3s; height: 160px;
+        padding: 20px; border-radius: 10px; text-align: center; border: 2px solid;
+        background: rgba(0,0,0,0.3);
     }
-    .available { border-color: #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.4); }
-    .active { border-color: #ff00aa; box-shadow: 0 0 15px rgba(255, 0, 170, 0.4); }
-    .completed { border-color: #00ffaa; box-shadow: 0 0 15px rgba(0, 255, 170, 0.4); }
-
-    /* Mission Briefing (The Pink Box) */
-    .briefing-box {
-        background: rgba(255, 0, 170, 0.12); border-left: 5px solid #ff00aa;
-        padding: 15px; margin: 15px 0; font-size: 14px; border-radius: 4px;
-        line-height: 1.5; color: #eee;
-    }
-
-    /* Badge Styles */
-    .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-right: 5px; text-transform: uppercase; }
-    .easy-badge { color: #00ffaa; border: 1px solid #00ffaa; }
-    .medium-badge { color: #ffaa00; border: 1px solid #ffaa00; }
-
-    /* Sidebar Profile Card */
-    .profile-card {
-        border: 2px solid #ff00aa; padding: 20px; border-radius: 15px;
-        background: rgba(0,0,0,0.6); text-align: center; box-shadow: 0 0 20px rgba(255, 0, 170, 0.4);
+    .available { border-color: #00ffff; box-shadow: 0 0 10px #00ffff; }
+    .active { border-color: #ff00aa; box-shadow: 0 0 10px #ff00aa; }
+    .completed { border-color: #00ffaa; box-shadow: 0 0 10px #00ffaa; }
+    /* Mission Cards */
+    .badge { padding: 2px 8px; border-radius: 20px; font-size: 12px; border: 1px solid; }
+    .easy { color: #00ffaa; border-color: #00ffaa; }
+    .medium { color: #ffaa00; border-color: #ffaa00; }
+    
+    /* Buttons */
+    div.stButton > button {
+        background-color: black; color: #00ffff; border: 2px solid #ff00aa;
+        border-radius: 10px; font-weight: bold; width: 100%;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -74,112 +56,97 @@ if "logged_in" not in st.session_state:
 
 users_db = load_users()
 
-# --- LOGIN SCREEN ---
+# --- SCREEN 1: THE LOGIN/SIGNUP GATE ---
 if not st.session_state.logged_in:
-    st.markdown("<h1 class='main-title'>🌴 VICE CITY GATEWAY</h1>", unsafe_allow_html=True)
+    st.markdown("<h1>🌴 VICE CITY GATEWAY</h1>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         mode = st.radio("SELECT PROTOCOL", ["LOGIN", "CREATE ACCOUNT"], horizontal=True)
-        user_input = st.text_input("OPERATOR ID")
-        pw_input = st.text_input("SECURITY CIPHER", type="password")
-        if st.button("INITIALIZE SESSION"):
-            if user_input in users_db and users_db[user_input]["password"] == pw_input:
-                st.session_state.logged_in = True
-                st.session_state.current_user = user_input
-                st.rerun()
-            else: st.error("ACCESS DENIED: Credentials Invalid")
-
-# --- MAIN DASHBOARD (LOGGED IN) ---
+        if mode == "LOGIN":
+            user_input = st.text_input("OPERATOR ID")
+            pw_input = st.text_input("SECURITY CIPHER", type="password")
+            if st.button("INITIALIZE SESSION"):
+                if user_input in users_db and users_db[user_input]["password"] == pw_input:
+                    st.session_state.logged_in = True
+                    st.session_state.current_user = user_input
+                    st.rerun()
+                else:
+                    st.error("ACCESS DENIED")
+        else:
+            new_user = st.text_input("CHOOSE OPERATOR NAME")
+            new_pw = st.text_input("SET CIPHER", type="password")
+            if st.button("GENERATE ID & REGISTER"):
+                if new_user and new_pw and new_user not in users_db:
+                    code = generate_account_code()
+                    users_db[new_user] = {"password": new_pw, "respect": 50, "code": code, "active": 0, "done": 0}
+                    save_users(users_db)
+                    st.success(f"ID GENERATED: {code}")
+# --- SCREEN 2: THE MAIN REPUTATION ENGINE ---
 else:
-    user_name = st.session_state.current_user
-    user_data = users_db[user_name]
+    user_data = users_db[st.session_state.current_user]
     
-    # --- 1. SIDEBAR PROFILE HUB ---
-    with st.sidebar:
-        st.markdown(f"""
-        <div class="profile-card">
-            <h2 style="color:#ff00aa; margin:0;">{user_name.upper()}</h2>
-            <p style="color:#00ffff; font-size:12px; margin-bottom:15px;">ID: {user_data.get('code', 'N/A')}</p>
-            <hr style="border-color:#444;">
-            <p style="text-align:left;"><b>RANK:</b> Street Associate</p>
-            <p style="text-align:left;"><b>RESPECT:</b> {user_data.get('respect', 50)}%</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.write("")
-        if st.button("✅ COMPLETE ACTIVE TASK", help="Click to finish one of your active missions"):
-            if user_data.get("active", 0) > 0:
-                users_db[user_name]["active"] -= 1
-                users_db[user_name]["done"] = user_data.get("done", 0) + 1
-                users_db[user_name]["respect"] = min(user_data["respect"] + 5, 100)
-                save_users(users_db)
-                st.toast("Mission Completed! Respect increased.")
-                st.rerun()
-            else:
-                st.warning("No active missions to complete.")
-                
-        if st.button("🚪 LOGOUT"):
-            st.session_state.logged_in = False
-            st.rerun()
+    # Sidebar Profile
+    st.sidebar.markdown(f"## 👤 {st.session_state.current_user}")
+    with st.sidebar.expander("📂 VIEW OPERATOR PROFILE"):
+        st.markdown(f"**ID:** `{user_data['code']}`")
+        st.markdown(f"**RANK:** Street Associate")
+        st.markdown(f"**RESPECT:** {user_data['respect']}")
+    
+    if st.sidebar.button("LOGOUT"):
+        st.session_state.logged_in = False
+        st.rerun()
 
-    # --- 2. HEADER & STATS ---
-    st.markdown("<h1 class='main-title'>🎯 VICE CITY MISSIONS</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='sub-text'>COMMUNITY MISSIONS · YOUR CHOICE · REAL IMPACT</p>", unsafe_allow_html=True)
-    st.markdown("<div class='alert-box'>⚠️ ALL MISSIONS ARE VOLUNTARY · NO PENALTIES FOR DECLINING · YOUR CHOICE MATTERS</div>", unsafe_allow_html=True)
+    # Dashboard Header
+    st.markdown("<h1>🎯 VICE CITY MISSIONS</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>COMMUNITY MISSIONS · YOUR CHOICE · REAL IMPACT</p>", unsafe_allow_html=True)
+    st.info("⚠️ ALL MISSIONS ARE VOLUNTARY · YOUR CHOICE MATTERS")
 
-    s1, s2, s3 = st.columns(3)
-    with s1:
-        st.markdown('<div class="stats-card available"><h1 style="color:#00ffff; margin:0;">12</h1><p>AVAILABLE MISSIONS</p></div>', unsafe_allow_html=True)
-    with s2:
-        st.markdown(f'<div class="stats-card active"><h1 style="color:#ff00aa; margin:0;">{user_data.get("active", 0)}</h1><p>ACTIVE MISSIONS</p></div>', unsafe_allow_html=True)
-    with s3:
-        st.markdown(f'<div class="stats-card completed"><h1 style="color:#00ffaa; margin:0;">{user_data.get("done", 0)}</h1><p>COMPLETED MISSIONS</p></div>', unsafe_allow_html=True)
+    # Stats Row
+    c1, c2, c3 = st.columns(3)
+    c1.markdown(f'<div class="stats-card available"><h3>12</h3><p>AVAILABLE</p></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="stats-card active"><h3>{user_data.get("active", 0)}</h3><p>ACTIVE</p></div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="stats-card completed"><h3>{user_data.get("done", 0)}</h3><p>COMPLETED</p></div>', unsafe_allow_html=True)
 
-    # --- 3. CATEGORIES ---
-    st.markdown("<h3 style='margin-top:40px;'>⭐ MISSION CATEGORIES</h3>", unsafe_allow_html=True)
-    c_cols = st.columns(6)
-    c_list = ["ALL MISSIONS", "COMMUNITY", "ENVIRONMENT", "EDUCATION", "SAFETY", "HEALTH"]
-    for i, name in enumerate(c_list):
-        c_cols[i].button(name, key=f"cat_{name}")
+    # Categories
+    st.markdown("### ⭐ MISSION CATEGORIES")
+    cat_cols = st.columns(6)
+    cats = ["ALL MISSIONS", "COMMUNITY", "ENVIRONMENT", "EDUCATION", "SAFETY", "HEALTH"]
+    for i, cat in enumerate(cats):
+        cat_cols[i].button(cat, key=f"cat_{i}")
 
-    # --- 4. MISSION GRID ---
-    st.markdown("<h2 style='color:#00ffff; margin-top:30px;'>🎯 AVAILABLE MISSIONS</h2>", unsafe_allow_html=True)
+    # Mission Cards
+    st.markdown("### 🎯 AVAILABLE MISSIONS")
     m1, m2, m3 = st.columns(3)
 
-    def draw_mission(col, title, tag, diff, briefing, loc, time, ppl, reward, btn_id):
-        badge_class = "easy-badge" if diff == "EASY" else "medium-badge"
-        with col:
-            with st.container(border=True):
-                st.markdown(f"<span class='badge {badge_class}'>{diff}</span> <small style='color:#ccc;'>{tag}</small>", unsafe_allow_html=True)
-                st.subheader(title)
-                st.write(f"Objective: {briefing[:50]}...") # Short intro
-                
-                st.markdown(f"""
-                <div class="briefing-box">
-                    <b>MISSION BRIEFING:</b><br>
-                    {briefing}
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.markdown(f"📍 **{loc}**")
-                st.markdown(f"⏱ **{time}**")
-                st.markdown(f"👥 **{ppl} interested**")
-                st.markdown(f"🏆 **{reward}**")
-                
-                if st.button("ACCEPT MISSION", key=btn_id, use_container_width=True):
-                    users_db[user_name]["active"] = user_data.get("active", 0) + 1
-                    save_users(users_db)
-                    st.toast(f"Accepted: {title}")
-                    st.rerun()
+    with m1:
+        with st.container(border=True):
+            st.markdown("<span class='badge easy'>EASY</span> <small>ENVIRONMENT</small>", unsafe_allow_html=True)
+            st.subheader("BEACH CLEANUP")
+            st.write("Clean up the beachfront to protect marine life.")
+            if st.button("ACCEPT MISSION", key="m1_btn"):
+                users_db[st.session_state.current_user]["active"] += 1
+                users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 5, 100)
+                save_users(users_db)
+                st.rerun()
 
-    draw_mission(m1, "BEACH CLEANUP OPERATION", "ENVIRONMENT", "EASY", 
-                 "The beaches are getting polluted. We need volunteers to help clean up the shoreline. Bring gloves, bags will be provided. Let's make Vice City beaches beautiful again!", 
-                 "Ocean Beach", "2-3 hours", "34", "Certificate of Appreciation", "m1_acc")
+    with m2:
+        with st.container(border=True):
+            st.markdown("<span class='badge easy'>EASY</span> <small>COMMUNITY</small>", unsafe_allow_html=True)
+            st.subheader("FOOD DRIVE")
+            st.write("Distribute meals to members downtown.")
+            if st.button("ACCEPT MISSION", key="m2_btn"):
+                users_db[st.session_state.current_user]["active"] += 1
+                users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 5, 100)
+                save_users(users_db)
+                st.rerun()
 
-    draw_mission(m2, "STREET FOOD DISTRIBUTION", "COMMUNITY", "EASY", 
-                 "Every Saturday, we distribute hot meals to those in need. Join us in making a difference. All food safety protocols followed.", 
-                 "Downtown Vice City", "3-4 hours", "45", "Community Service Hours", "m2_acc")
-
-    draw_mission(m3, "YOUTH CODING WORKSHOP", "EDUCATION", "MEDIUM", 
-                 "Share your tech knowledge with the next generation. Help teenagers learn coding basics. No teaching experience required, just patience and enthusiasm!", 
-                 "Community Tech Center", "4 hours", "12", "Mentor Recognition Badge", "m3_acc")
+    with m3:
+        with st.container(border=True):
+            st.markdown("<span class='badge medium'>MEDIUM</span> <small>EDUCATION</small>", unsafe_allow_html=True)
+            st.subheader("CODING WORKSHOP")
+            st.write("Teach basic programming to local teenagers.")
+            if st.button("ACCEPT MISSION", key="m3_btn"):
+                users_db[st.session_state.current_user]["active"] += 1
+                users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 10, 100)
+                save_users(users_db)
+                st.rerun()
