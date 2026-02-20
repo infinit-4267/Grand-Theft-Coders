@@ -1,12 +1,27 @@
-# Vice City Reputation Engine
+---
+title: Vice City Reputation Engine
+emoji: 🌴
+colorFrom: pink
+colorTo: blue
+sdk: streamlit
+sdk_version: "1.32.0"
+python_version: "3.10"
+app_file: app.py
+pinned: false
+---
 
-A gamified civic behavior modulation system built during Devs of Vice City Hackathon.
+# 🌴 Vice City Reputation Engine
 
-## Features
+Turn Panic into Points.
+
+A gamified civic behavior modulation system built for the Devs of Vice City Hackathon.
+
+## 🚀 Features
 - Reputation-based access control
 - Mission-based citizen engagement
-- Real-time behavior simulation dashboard
+- Real-time civic behavior simulation
+- Crisis response mode
 
-## Built With
+## 🛠 Built With
 - Streamlit
 - Python
