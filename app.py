@@ -3,6 +3,7 @@ import random
 import json
 import os
 import string
+from PIL import Image, ImageDraw
 
 # 1. Page Configuration
 st.set_page_config(page_title="Vice City Reputation Engine", layout="wide")
@@ -100,6 +101,37 @@ else:
     st.markdown("<h1>🎯 VICE CITY MISSIONS</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align:center;'>COMMUNITY MISSIONS · YOUR CHOICE · REAL IMPACT</p>", unsafe_allow_html=True)
     st.info("⚠️ ALL MISSIONS ARE VOLUNTARY · YOUR CHOICE MATTERS")
+    # --- [NEW] CRIME TRACKER LOGIC ---
+    districts = {
+        "Downtown / Bayfront": {"x": 0.425, "y": 0.680, "crime": "Active: Drug Deal"},
+        "Bayside Marketplace": {"x": 0.385, "y": 0.585, "crime": "Active: Shoplifting"},
+        "Port of Miami": {"x": 0.810, "y": 0.730, "crime": "Active: Smuggling"},
+        "Watson Island": {"x": 0.740, "y": 0.350, "crime": "Active: Street Race"},
+        "Overtown": {"x": 0.150, "y": 0.220, "crime": "Active: Grand Theft Auto"},
+    }
+
+    def draw_intel_map():
+        try:
+            base_map = Image.open("map.jpg").convert("RGBA")
+        except:
+            base_map = Image.new("RGBA", (1654, 1169), (20, 20, 20))
+        
+        draw = ImageDraw.Draw(base_map)
+        w, h = base_map.size
+        
+        for name, data in districts.items():
+            px, py = data['x'] * w, data['y'] * h
+            pin_color = (255, 0, 170, 255) # Vice Pink
+            
+            # Draw Google-style Pin
+            r = 15
+            draw.ellipse([px-r, py-r*3, px+r, py-r], fill=pin_color, outline="white", width=2)
+            draw.polygon([(px-r, py-r*2), (px+r, py-r*2), (px, py)], fill=pin_color, outline="white")
+            draw.ellipse([px-5, py-r*2-5, px+5, py-r*2+5], fill="white") # Pin Hole
+
+            # Text Label
+            draw.text((px + 20, py - 30), f"{name.upper()}\nREPORT: {data['crime'].upper()}", fill="white")
+        return base_map
 
     # Stats Row
     c1, c2, c3 = st.columns(3)
@@ -150,3 +182,19 @@ else:
                 users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 10, 100)
                 save_users(users_db)
                 st.rerun()
+    # --- [NEW] TACTICAL MAP DISPLAY ---
+    st.divider()
+    st.markdown("### 🚨 LIVE CRIMINAL ACTIVITY TRACKER")
+    
+    col_map_info, col_map_render = st.columns([1, 3])
+    
+    with col_map_info:
+        st.write("Vercetti Bureau Satellite Feed")
+        st.markdown("🔴 **Red Pins:** Active Crimes")
+        if st.button("RESCAN CITY SENSORS"):
+            st.rerun()
+
+    with col_map_render:
+        with st.spinner("Acquiring Satellite Lock..."):
+            crime_map = draw_intel_map()
+            st.image(crime_map, use_column_width=True, caption="VICE CITY CRIME FEED v1.0")
