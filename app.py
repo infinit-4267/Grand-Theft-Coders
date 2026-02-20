@@ -5,7 +5,7 @@ import random
 st.set_page_config(page_title="Vice City Reputation Engine", layout="wide")
 
 # 2. HEADER IMAGE 🌴
-# Ensure "Grand Theft Coders.png" is in the same folder as this script
+# Fix: Changed 'use_container_width' to 'use_column_width' for older Streamlit versions
 st.image("Grand Theft Coders.png", use_column_width=True)
 
 # 3. 🔥 Custom Neon CSS
@@ -61,7 +61,11 @@ if st.sidebar.button("Spread Misinformation (-20 Respect)"):
 
 # Respect Score Display
 st.markdown("### 🏆 Respect Score")
-st.progress(min(max(st.session_state.respect, 0), 100)) # Clamping value between 0-100
+
+# Clamping value between 0-100 to prevent progress bar errors
+current_val = min(max(st.session_state.respect, 0), 100)
+st.progress(current_val) 
+
 st.markdown(f"<h3>Current Score: {st.session_state.respect}</h3>", unsafe_allow_html=True)
 
 # Access Logic based on score
