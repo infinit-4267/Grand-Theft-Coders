@@ -6,7 +6,7 @@ st.set_page_config(page_title="Vice City Reputation Engine", layout="wide")
 
 # 2. HEADER IMAGE 🌴
 # Ensure "Grand Theft Coders.png" is in the same folder as this script
-st.image("Grand Theft Coders.png", use_container_width=True)
+st.image("Grand Theft Coders.png", use_column_width=True)
 
 # 3. 🔥 Custom Neon CSS
 st.markdown("""
