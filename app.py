@@ -1,39 +1,35 @@
 import streamlit as st
 import random
 
-# 1. Page Configuration
 st.set_page_config(page_title="Vice City Reputation Engine", layout="wide")
 
-# 2. HEADER IMAGE 🌴
-# Ensure "Grand Theft Coders.png" is in the same folder as this script
-st.image("Grand Theft Coders.png", use_container_width=True)
-
-# 3. 🔥 Custom Neon CSS
+# 🔥 Custom Neon CSS
 st.markdown("""
 <style>
-/* Reset background and text colors */
 html, body, [class*="css"]  {
     background-color: #000000;
     color: white;
 }
-/* Reduce spacing between the image and the title */
-.block-container {
-    padding-top: 1rem;
-}
-/* Neon Title Styling */
+
+/* Main title */
 h1 {
     color: #ff00aa;
     text-align: center;
     font-size: 60px;
     text-shadow: 0 0 10px #ff00aa, 0 0 20px #00ffff;
 }
+
+/* Subheaders */
 h3 {
     color: #00ffff;
 }
-/* Progress bar and button styling */
-div.stProgress > div > div > div > div {
-    background-color: #00ffff;
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #111111;
 }
+
+/* Buttons */
 div.stButton > button {
     background-color: black;
     color: #00ffff;
@@ -41,58 +37,54 @@ div.stButton > button {
     border-radius: 10px;
     font-weight: bold;
 }
+div.stButton > button:hover {
+    background-color: #ff00aa;
+    color: black;
+    box-shadow: 0 0 15px #ff00aa;
+}
+
+/* Progress bar */
+div.stProgress > div > div > div > div {
+    background-color: #00ffff;
+}
 </style>
 """, unsafe_allow_html=True)
-# --- SESSION INITIALIZATION ---
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "respect" not in st.session_state:
-    st.session_state.respect = 50
 
-# --- SCREEN 1: THE LOGIN GATE ---
-if not st.session_state.logged_in:
-    st.markdown("<h1>🌴 VICE CITY GATEWAY</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align:center;'>Enter Cipher to Access Terminal</h3>", unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.markdown('<div class="login-box">', unsafe_allow_html=True)
-        user = st.text_input("Operator ID")
-        pw = st.text_input("Security Cipher", type="password")
-        
-        if st.button("INITIALIZE SESSION"):
-            # Set your credentials here
-            if user == "admin" and pw == "vice84":
-                st.session_state.logged_in = True
-                st.rerun()
-            else:
-                st.error("ACCESS DENIED: Credentials Invalid")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# 4. 🏝 Main Content
+# 🏝 Title
 st.markdown("<h1>🌴 Vice City Reputation Engine</h1>", unsafe_allow_html=True)
 st.markdown("<h3 style='text-align:center;'>Turn Panic Into Points</h3>", unsafe_allow_html=True)
 
-# Initialize session state for respect points
+# Initialize session
 if "respect" not in st.session_state:
     st.session_state.respect = 50
 
-# Sidebar for "Missions"
+# Sidebar missions
 st.sidebar.header("🎯 Missions")
+
 if st.sidebar.button("Secure Perimeter (+10 Respect)"):
     st.session_state.respect += 10
+
 if st.sidebar.button("Spread Misinformation (-20 Respect)"):
     st.session_state.respect -= 20
 
 # Respect Score Display
 st.markdown("### 🏆 Respect Score")
-st.progress(min(max(st.session_state.respect, 0), 100)) # Clamping value between 0-100
+st.progress(st.session_state.respect)
+
 st.markdown(f"<h3>Current Score: {st.session_state.respect}</h3>", unsafe_allow_html=True)
 
-# Access Logic based on score
+# Access Logic
 if st.session_state.respect >= 80:
     st.success("ACCESS LEVEL: GOLD ZONE")
 elif st.session_state.respect >= 50:
     st.warning("ACCESS LEVEL: SILVER ZONE")
 else:
     st.error("ACCESS LEVEL: RESTRICTED")
+
+# Fake Live Data
+st.markdown("### 📡 Live City Feed")
+st.write({
+    "Active Citizens": random.randint(1000, 5000),
+    "Heat Level": random.randint(1, 5),
+    "Storm Severity": random.randint(1, 10)
+})
