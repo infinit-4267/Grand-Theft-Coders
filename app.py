@@ -31,27 +31,34 @@ def generate_account_code():
 
 # --- STYLING & BACKGROUND ---
 def get_base64(bin_file):
-    with open(bin_file, 'rb') as f: return base64.b64encode(f.read()).decode()
+    try:
+        with open(bin_file, 'rb') as f: return base64.b64encode(f.read()).decode()
+    except: return None
 
-try:
-    bin_str = get_base64('background.png')
-    bg_style = f"""
-    <style>
+bin_str = get_base64('background.png')
+bg_style = f"""
+<style>
     .stApp {{
-        background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("data:image/png;base64,{bin_str}");
+        background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url("data:image/png;base64,{bin_str if bin_str else ""}");
         background-size: cover; background-position: center; background-attachment: fixed;
     }}
-    html, body, [class*="css"] {{ color: white; font-family: 'Courier New', monospace; }}
+    html, body, [class*="css"], label, p {{ color: white !important; font-family: 'Courier New', monospace; }}
     h1 {{ color: #ff00aa; text-align: center; text-shadow: 0 0 20px #ff00aa, 0 0 40px #00ffff; }}
     .login-box {{ padding: 30px; border: 2px solid #00ffff; border-radius: 20px; background: rgba(15,15,15,0.85); box-shadow: 0 0 30px #00ffff; margin: auto; }}
-    </style>"""
-    st.markdown(bg_style, unsafe_allow_html=True)
-except:
-    st.markdown("<style>.stApp { background-color: #0d0221; }</style>", unsafe_allow_html=True)
+    .stats-card {{ padding: 20px; border-radius: 10px; text-align: center; border: 2px solid; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); }}
+    .available {{ border-color: #00ffff; box-shadow: 0 0 10px #00ffff; }}
+    .active {{ border-color: #ff00aa; box-shadow: 0 0 10px #ff00aa; }}
+    .completed {{ border-color: #00ffaa; box-shadow: 0 0 10px #00ffaa; }}
+    div.stButton > button {{ background-color: black; color: #00ffff; border: 2px solid #ff00aa; border-radius: 10px; font-weight: bold; width: 100%; }}
+</style>
+"""
+st.markdown(bg_style, unsafe_allow_html=True)
 
 # --- SESSION INITIALIZATION ---
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "user_location" not in st.session_state: st.session_state.user_location = {"lat": 25.7617, "lng": -80.1918}
+if "selected_location" not in st.session_state: st.session_state.selected_location = None
+if "confirmation_pending" not in st.session_state: st.session_state.confirmation_pending = False
 
 users_db = load_json(DB_FILE)
 
@@ -60,7 +67,6 @@ if not st.session_state.logged_in:
     st.markdown('<div class="login-box">', unsafe_allow_html=True)
     st.markdown("<h1>🌴 VICE CITY GATEWAY</h1>", unsafe_allow_html=True)
     mode = st.radio("PROTOCOL", ["LOGIN", "CREATE ACCOUNT"], horizontal=True)
-    
     if mode == "LOGIN":
         u_in = st.text_input("OPERATOR ID")
         p_in = st.text_input("CIPHER", type="password")
@@ -69,71 +75,115 @@ if not st.session_state.logged_in:
                 st.session_state.logged_in, st.session_state.current_user = True, u_in
                 st.rerun()
     else:
-        new_u = st.text_input("OPERATOR NAME")
+        new_u = st.text_input("NAME")
         new_p = st.text_input("SET CIPHER", type="password")
         if st.button("REGISTER"):
-            if new_u and new_p and new_u not in users_db:
+            if new_u and new_p:
                 users_db[new_u] = {
-                    "password": new_p, "respect": 50, "xp": 0, "done": 0, 
+                    "password": new_p, "respect": 50, "xp": 0, "done": 0, "active": 0,
                     "active_list": [], "history": [], "join_date": str(date.today()),
-                    "code": generate_account_code()
+                    "code": generate_account_code(), "truth_index": 50
                 }
                 save_json(DB_FILE, users_db)
-                st.success("REGISTERED. SWITCH TO LOGIN.")
+                st.success("REGISTERED. LOGIN NOW.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- MAIN ENGINE ---
+# --- MAIN INTERFACE ---
 else:
     user_data = users_db[st.session_state.current_user]
-    page = st.sidebar.selectbox("📂 MENU", ["Tactical Map", "Missions", "Profile"])
+    global_data = load_json(GLOBAL_DB)
+    page = st.sidebar.selectbox("📂 MENU", ["Missions", "Tactical Map", "Profile"])
     
     if st.sidebar.button("LOGOUT"):
         st.session_state.logged_in = False
         st.rerun()
 
-    # --- TAB 1: TACTICAL MAP & JOYSTICK ---
-    if page == "Tactical Map":
+    # --- PAGE: MISSIONS ---
+    if page == "Missions":
+        st.markdown("<h1>🎯 VICE CITY MISSIONS</h1>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        c1.markdown(f'<div class="stats-card available"><h3>12</h3><p>AVAILABLE</p></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div class="stats-card active"><h3>{user_data.get("active", 0)}</h3><p>ACTIVE</p></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div class="stats-card completed"><h3>{user_data.get("done", 0)}</h3><p>COMPLETED</p></div>', unsafe_allow_html=True)
+
+        st.markdown("### 🎯 AVAILABLE MISSIONS")
+        m_cols = st.columns(3)
+        missions = [
+            ("BEACH CLEANUP", "Clear debris from Ocean Beach.", 5),
+            ("FOOD DRIVE", "Help distribute meals downtown.", 5),
+            ("CODING WORKSHOP", "Mentor local teens in Python.", 10)
+        ]
+        for i, (title, desc, pts) in enumerate(missions):
+            with m_cols[i]:
+                with st.container(border=True):
+                    st.subheader(title)
+                    st.write(desc)
+                    if st.button(f"ACCEPT {title}", key=f"m{i}"):
+                        users_db[st.session_state.current_user]["active"] += 1
+                        users_db[st.session_state.current_user]["xp"] += pts
+                        users_db[st.session_state.current_user]["history"].append(f"Accepted {title}")
+                        save_json(DB_FILE, users_db)
+                        st.toast(f"Mission {title} Active!")
+
+    # --- PAGE: TACTICAL MAP ---
+    elif page == "Tactical Map":
         st.markdown("<h1>🚨 TACTICAL OVERLAY</h1>", unsafe_allow_html=True)
-        # (Insert your friend's Leaflet map code here, using st.session_state.user_location)
-        # Use st.columns for the North/South/East/West buttons to move the user
-        st.info(f"Current GPS: {st.session_state.user_location['lat']:.4f}, {st.session_state.user_location['lng']:.4f}")
+        col_left, col_right = st.columns([1.2, 2.5])
+        
+        with col_right:
+            crimes_json = json.dumps(global_data.get("incidents", []))
+            user_lat, user_lng = st.session_state.user_location['lat'], st.session_state.user_location['lng']
+            
+            map_html = f"""
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+            <div id="map" style="width: 100%; height: 500px; background: #1a1a1a;"></div>
+            <script>
+                var map = L.map('map').setView([{user_lat}, {user_lng}], 13);
+                L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}.png').addTo(map);
+                L.circleMarker([{user_lat}, {user_lng}], {{radius: 12, fillColor: '#00ff00', color: '#fff', weight: 3, fillOpacity: 0.9}}).addTo(map);
+                var crimes = {crimes_json};
+                crimes.forEach(function(c) {{
+                    L.circleMarker([c.lat, c.lng], {{radius: 10, fillColor: '#ff00aa', color: '#fff', fillOpacity: 0.8}}).bindPopup(c.type).addTo(map);
+                }});
+            </script>
+            """
+            components.html(map_html, height=520)
 
-    # --- TAB 2: MISSIONS ---
-    elif page == "Missions":
-        st.markdown("<h1>🎯 ACTIVE MISSIONS</h1>", unsafe_allow_html=True)
-        # Logic for accepting missions and adding XP
+            # Movement Controls
+            mc1, mc2, mc3 = st.columns(3)
+            if mc2.button("⬆️ NORTH"): st.session_state.user_location['lat'] += 0.002; st.rerun()
+            if mc1.button("⬅️ WEST"): st.session_state.user_location['lng'] -= 0.002; st.rerun()
+            if mc3.button("➡️ EAST"): st.session_state.user_location['lng'] += 0.002; st.rerun()
+            if st.button("🚨 REPORT AT CURRENT LOCATION"):
+                st.session_state.confirmation_pending = True; st.rerun()
 
-    # --- TAB 3: PROFILE (Integrated Friend's Code) ---
+        with col_left:
+            st.write("📋 **DISPATCH CONSOLE**")
+            c_type = st.selectbox("Crime Type", ["Robbery", "GTA", "Drug Deal", "Vandalism"])
+            if st.session_state.confirmation_pending:
+                if st.button("✅ CONFIRM REPORT"):
+                    new_crime = {"lat": st.session_state.user_location['lat'], "lng": st.session_state.user_location['lng'], "type": c_type}
+                    global_data["incidents"].append(new_crime)
+                    save_json(GLOBAL_DB, global_data)
+                    st.session_state.confirmation_pending = False
+                    st.success("Broadcasted!")
+                    st.rerun()
+
+    # --- PAGE: PROFILE ---
     elif page == "Profile":
         st.markdown("<h1>👤 OPERATOR PROFILE</h1>", unsafe_allow_html=True)
-        
-        # Calculate Level & Rank
         level = user_data["xp"] // 100 + 1
-        xp_progress = (user_data["xp"] % 100) / 100
-        rank = "Kingpin" if level > 10 else "Street Associate"
+        tier = "🥈 Silver" if user_data["respect"] < 70 else "💎 Diamond"
         
-        # Respect Tiers
-        if user_data["respect"] < 40: tier = "🥉 Bronze"
-        elif user_data["respect"] < 70: tier = "🥈 Silver"
-        elif user_data["respect"] < 90: tier = "🥇 Gold"
-        else: tier = "💎 Diamond"
-
-        st.markdown(f"""
-        <div class="login-box">
+        st.markdown(f"""<div class="login-box">
             <h3>ID: {user_data['code']}</h3>
-            <h3>Rank: {rank}</h3>
-            <h3>Tier: {tier}</h3>
-            <h3>Level: {level}</h3>
-            <h3>Respect: {user_data['respect']}%</h3>
-            <h3>Total XP: {user_data['xp']}</h3>
-            <h3>Joined: {user_data['join_date']}</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        st.progress(xp_progress)
+            <h3>Tier: {tier} | Level: {level}</h3>
+            <h3>Respect: {user_data['respect']}% | XP: {user_data['xp']}</h3>
+            <p>Joined: {user_data['join_date']}</p>
+        </div>""", unsafe_allow_html=True)
+        st.progress((user_data["xp"] % 100) / 100)
         
         st.divider()
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Completed", user_data["done"])
-        col2.metric("Active", len(user_data["active_list"]))
-        col3.metric("Respect %", user_data["respect"])
-        col4.metric("Level", level)
+        st.subheader("📜 Recent History")
+        for h in reversed(user_data["history"][-5:]): st.write("✅", h)
