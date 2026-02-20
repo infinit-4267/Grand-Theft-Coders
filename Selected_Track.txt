@@ -1,0 +1,23 @@
+NPCs WITH FREE WILL
+Problem Statement:
+Design a citizen behavior modulation system that uses social influence, incentives, gamification, or narrative control to guide public behavior during city-wide events such as crises, elections, emergencies, or protests.
+
+Expected Outcomes:
+- Influence mass behavior positively
+- Reduce panic and misinformation
+- Reward cooperation and civic action
+- Be adaptable to multiple city scenarios
+- Respect ethical boundaries while remaining effective
+
+Suggested Product Directions:
+- Respect Score System
+- Influencer-Controlled City Alerts
+- Civic Quest App (missions for citizens)
+- Misinformation Heat Tracker
+- Reputation-Based Access Control
+
+Unconventional Angle:
+- Treat citizens as players, not users
+- Replace warnings with missions
+- Use humor, memes, or pop culture
+- Design controlled "illusion of choice"
