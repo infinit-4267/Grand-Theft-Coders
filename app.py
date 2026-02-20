@@ -21,160 +21,133 @@ def save_users(users):
         json.dump(users, f, indent=4)
 
 def generate_account_code():
-    # Generates a unique "Gangster ID" like VC-X89L2
     return "VC-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
 
-# --- CSS STYLING (Black Background & Neon Accents) ---
+# --- CSS STYLING (The Neon Look) ---
 st.markdown("""
 <style>
-/* Force Black Background for the entire app */
-.stApp {
-    background-color: #000000;
-}
-html, body, [class*="css"] {
-    background-color: #000000;
-    color: white;
-}
-h1 {
-    color: #ff00aa;
-    text-align: center;
-    font-size: 60px;
-    text-shadow: 0 0 10px #ff00aa, 0 0 20px #00ffff;
-}
-h3 {
-    color: #00ffff;
-}
-/* Neon Buttons */
-div.stButton > button {
-    background-color: black;
-    color: #00ffff;
-    border: 2px solid #ff00aa;
-    border-radius: 10px;
-    font-weight: bold;
-    width: 100%;
-    transition: 0.3s;
-}
-div.stButton > button:hover {
-    border-color: #00ffff;
-    color: #ff00aa;
-    box-shadow: 0 0 15px #ff00aa;
-}
-/* Profile Card Styling */
-.profile-card {
-    border: 1px solid #ff00aa;
-    padding: 15px;
-    border-radius: 10px;
-    background: rgba(255, 0, 170, 0.05);
-}
+    .stApp { background-color: #0d0221; color: white; }
+    h1 { color: #ff00aa; text-align: center; text-shadow: 0 0 10px #ff00aa, 0 0 20px #00ffff; }
+    
+    /* Stats Cards */
+    .stats-card {
+        padding: 20px; border-radius: 10px; text-align: center; border: 2px solid;
+        background: rgba(0,0,0,0.3);
+    }
+    .available { border-color: #00ffff; box-shadow: 0 0 10px #00ffff; }
+    .active { border-color: #ff00aa; box-shadow: 0 0 10px #ff00aa; }
+    .completed { border-color: #00ffaa; box-shadow: 0 0 10px #00ffaa; }
+
+    /* Mission Cards */
+    .badge { padding: 2px 8px; border-radius: 20px; font-size: 12px; border: 1px solid; }
+    .easy { color: #00ffaa; border-color: #00ffaa; }
+    .medium { color: #ffaa00; border-color: #ffaa00; }
+    
+    /* Buttons */
+    div.stButton > button {
+        background-color: black; color: #00ffff; border: 2px solid #ff00aa;
+        border-radius: 10px; font-weight: bold; width: 100%;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- SESSION INITIALIZATION ---
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-if "current_user" not in st.session_state:
-    st.session_state.current_user = None
 
-# Load the permanent database
 users_db = load_users()
 
 # --- SCREEN 1: THE LOGIN/SIGNUP GATE ---
 if not st.session_state.logged_in:
     st.markdown("<h1>🌴 VICE CITY GATEWAY</h1>", unsafe_allow_html=True)
-    
     col1, col2, col3 = st.columns([1, 1.5, 1])
-    
     with col2:
-        # Toggle between Login and Signup
         mode = st.radio("SELECT PROTOCOL", ["LOGIN", "CREATE ACCOUNT"], horizontal=True)
-        st.divider()
-
         if mode == "LOGIN":
             user_input = st.text_input("OPERATOR ID")
             pw_input = st.text_input("SECURITY CIPHER", type="password")
-            
             if st.button("INITIALIZE SESSION"):
                 if user_input in users_db and users_db[user_input]["password"] == pw_input:
                     st.session_state.logged_in = True
                     st.session_state.current_user = user_input
                     st.rerun()
                 else:
-                    st.error("ACCESS DENIED: Credentials Invalid")
-        
+                    st.error("ACCESS DENIED")
         else:
-            st.markdown("<small style='color:#00ffff;'>Enter details to generate your unique city code.</small>", unsafe_allow_html=True)
             new_user = st.text_input("CHOOSE OPERATOR NAME")
             new_pw = st.text_input("SET CIPHER", type="password")
-            
             if st.button("GENERATE ID & REGISTER"):
-                if new_user in users_db:
-                    st.warning("Operator ID already taken.")
-                elif new_user and new_pw:
+                if new_user and new_pw and new_user not in users_db:
                     code = generate_account_code()
-                    users_db[new_user] = {
-                        "password": new_pw,
-                        "respect": 50,
-                        "code": code
-                    }
+                    users_db[new_user] = {"password": new_pw, "respect": 50, "code": code, "active": 0, "done": 0}
                     save_users(users_db)
-                    st.success(f"WELCOME TO THE FAMILY! Your Unique ID is: {code}")
-                    st.info("You can now switch to LOGIN to enter.")
-                else:
-                    st.error("The Boss requires a name and a cipher.")
-
+                    st.success(f"ID GENERATED: {code}")
 # --- SCREEN 2: THE MAIN REPUTATION ENGINE ---
 else:
-    # Get current user data from the DB
     user_data = users_db[st.session_state.current_user]
     
-    # Sidebar: Profile & Missions
+    # Sidebar Profile
     st.sidebar.markdown(f"## 👤 {st.session_state.current_user}")
-    
-    # Profile Access (Expander acts as a pop-up profile)
     with st.sidebar.expander("📂 VIEW OPERATOR PROFILE"):
-        st.markdown(f"""
-        <div class="profile-card">
-        <p style="color:#00ffff; margin-bottom:5px;"><b>ID CODE:</b> {user_data['code']}</p>
-        <p style="color:#ff00aa; margin-bottom:5px;"><b>RANK:</b> Street Associate</p>
-        <p style="color:white; margin-bottom:5px;"><b>CURRENT RESPECT:</b> {user_data['respect']}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"**ID:** `{user_data['code']}`")
+        st.markdown(f"**RANK:** Street Associate")
+        st.markdown(f"**RESPECT:** {user_data['respect']}")
     
-    st.sidebar.divider()
-    
-    st.sidebar.header("🎯 MISSIONS")
-    if st.sidebar.button("Secure Perimeter (+10 Respect)"):
-        users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 10, 100)
-        save_users(users_db)
-        st.rerun()
-    
-    if st.sidebar.button("Spread Misinformation (-20 Respect)"):
-        users_db[st.session_state.current_user]["respect"] = max(user_data["respect"] - 20, 0)
-        save_users(users_db)
-        st.rerun()
-
     if st.sidebar.button("LOGOUT"):
         st.session_state.logged_in = False
-        st.session_state.current_user = None
         st.rerun()
 
-    # Main Dashboard
-    try:
-        st.image("Grand20Coders.png", use_column_width=True)
-    except:
-        st.info("Header image not found.")
+    # Dashboard Header
+    st.markdown("<h1>🎯 VICE CITY MISSIONS</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;'>COMMUNITY MISSIONS · YOUR CHOICE · REAL IMPACT</p>", unsafe_allow_html=True)
+    st.info("⚠️ ALL MISSIONS ARE VOLUNTARY · YOUR CHOICE MATTERS")
 
-    st.markdown(f"<h1>🌴 Reputation Engine</h1>", unsafe_allow_html=True)
-    
-    # Respect Display
-    st.markdown(f"<h3>Status: {st.session_state.current_user}</h3>", unsafe_allow_html=True)
-    st.progress(user_data["respect"] / 100)
-    st.write(f"Respect Points: {user_data['respect']}")
+    # Stats Row
+    c1, c2, c3 = st.columns(3)
+    c1.markdown(f'<div class="stats-card available"><h3>12</h3><p>AVAILABLE</p></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="stats-card active"><h3>{user_data.get("active", 0)}</h3><p>ACTIVE</p></div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="stats-card completed"><h3>{user_data.get("done", 0)}</h3><p>COMPLETED</p></div>', unsafe_allow_html=True)
 
-    # Logic-based Access Levels
-    if user_data["respect"] >= 80:
-        st.success("ACCESS LEVEL: GOLD ZONE")
-    elif user_data["respect"] >= 50:
-        st.warning("ACCESS LEVEL: SILVER ZONE")
-    else:
-        st.error("ACCESS LEVEL: RESTRICTED")
+    # Categories
+    st.markdown("### ⭐ MISSION CATEGORIES")
+    cat_cols = st.columns(6)
+    cats = ["ALL MISSIONS", "COMMUNITY", "ENVIRONMENT", "EDUCATION", "SAFETY", "HEALTH"]
+    for i, cat in enumerate(cats):
+        cat_cols[i].button(cat, key=f"cat_{i}")
+
+    # Mission Cards
+    st.markdown("### 🎯 AVAILABLE MISSIONS")
+    m1, m2, m3 = st.columns(3)
+
+    with m1:
+        with st.container(border=True):
+            st.markdown("<span class='badge easy'>EASY</span> <small>ENVIRONMENT</small>", unsafe_allow_html=True)
+            st.subheader("BEACH CLEANUP")
+            st.write("Clean up the beachfront to protect marine life.")
+            if st.button("ACCEPT MISSION", key="m1_btn"):
+                users_db[st.session_state.current_user]["active"] += 1
+                users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 5, 100)
+                save_users(users_db)
+                st.rerun()
+
+    with m2:
+        with st.container(border=True):
+            st.markdown("<span class='badge easy'>EASY</span> <small>COMMUNITY</small>", unsafe_allow_html=True)
+            st.subheader("FOOD DRIVE")
+            st.write("Distribute meals to members downtown.")
+            if st.button("ACCEPT MISSION", key="m2_btn"):
+                users_db[st.session_state.current_user]["active"] += 1
+                users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 5, 100)
+                save_users(users_db)
+                st.rerun()
+
+    with m3:
+        with st.container(border=True):
+            st.markdown("<span class='badge medium'>MEDIUM</span> <small>EDUCATION</small>", unsafe_allow_html=True)
+            st.subheader("CODING WORKSHOP")
+            st.write("Teach basic programming to local teenagers.")
+            if st.button("ACCEPT MISSION", key="m3_btn"):
+                users_db[st.session_state.current_user]["active"] += 1
+                users_db[st.session_state.current_user]["respect"] = min(user_data["respect"] + 10, 100)
+                save_users(users_db)
+                st.rerun()
