@@ -1,19 +1,12 @@
----
-title: GrandTheft Coders
-emoji: 🚀
-colorFrom: red
-colorTo: red
-sdk: docker
-app_port: 8501
-tags:
-- streamlit
-pinned: false
-short_description: Streamlit template space
----
+# Vice City Reputation Engine
 
-# Welcome to Streamlit!
+A gamified civic behavior modulation system built during Devs of Vice City Hackathon.
 
-Edit `/src/streamlit_app.py` to customize this app to your heart's desire. :heart:
+## Features
+- Reputation-based access control
+- Mission-based citizen engagement
+- Real-time behavior simulation dashboard
 
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+## Built With
+- Streamlit
+- Python
