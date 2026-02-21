@@ -76,27 +76,17 @@ st.markdown(bg_style, unsafe_allow_html=True)
 # --- NEON CSS ---
 st.markdown("""
 <style>
-#MainMenu { visibility: hidden; }
+    /* HIDE TOOLBAR BUTTONS BUT KEEP THE SPACE */
+    #MainMenu { visibility: hidden; }
     [data-testid="stToolbar"] { visibility: hidden; }
     .stAppDeployButton { display: none; }
-     /* REMOVE TOP PADDING SO CONTENT FILLS FROM THE TOP */
+    
+    /* REMOVE TOP PADDING SO CONTENT FILLS FROM THE TOP */
     .stApp > .main .block-container {
         padding-top: 0rem !important;
         margin-top: -80px !important;
     }
-        html, body, [class*="css"] { color: white; font-family: 'Courier New', Courier, monospace; }
-    h1 { color: #ff00aa; text-align: center; font-size: 55px; text-shadow: 0 0 20px #ff00aa, 0 0 40px #00ffff; }
-    h3 { color: #00ffff; text-shadow: 0 0 10px #00ffff; }
-    .login-box { 
-        padding: 40px; 
-        border: 2px solid #00ffff; 
-        border-radius: 20px; 
-        background-color: rgba(15, 15, 15, 0.85); 
-        backdrop-filter: blur(12px); 
-        box-shadow: 0 0 30px #00ffff;
-        max-width: 500px;
-        margin: auto;
-    }
+    
     html, body, [class*="css"] { color: white; font-family: 'Courier New', Courier, monospace; }
     h1 { color: #ff00aa; text-align: center; font-size: 55px; text-shadow: 0 0 20px #ff00aa, 0 0 40px #00ffff; }
     h3 { color: #00ffff; text-shadow: 0 0 10px #00ffff; }
@@ -110,41 +100,7 @@ st.markdown("""
         max-width: 500px;
         margin: auto;
     }
-    .stats-card {
-        padding: 20px; border-radius: 10px; text-align: center; border: 2px solid;
-        background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
-    }
-    .available { border-color: #00ffff; box-shadow: 0 0 10px #00ffff; }
-    .active { border-color: #ff00aa; box-shadow: 0 0 10px #ff00aa; }
-    .completed { border-color: #00ffaa; box-shadow: 0 0 10px #00ffaa; }
-    .badge { padding: 2px 8px; border-radius: 20px; font-size: 12px; border: 1px solid; }
-    .easy { color: #00ffaa; border-color: #00ffaa; }
-    .medium { color: #ffaa00; border-color: #ffaa00; }
-    .hard { color: #ff4444; border-color: #ff4444; }
-    div.stButton > button {
-        background-color: black; color: #00ffff; border: 2px solid #ff00aa;
-        border-radius: 10px; font-weight: bold; width: 100%; height: 45px;
-    }
-    div.stButton > button:hover {
-        background-color: #ff00aa; color: white; box-shadow: 0 0 20px #ff00aa;
-    }
-    .confirmation-box {
-        padding: 20px;
-        border: 2px solid #00ffff;
-        border-radius: 10px;
-        background-color: rgba(0, 20, 40, 0.9);
-        box-shadow: 0 0 20px #00ffff;
-        margin: 10px 0;
-    }
-    .user-location-box {
-        padding: 15px;
-        border: 2px solid #00ff00;
-        border-radius: 10px;
-        background-color: rgba(0, 40, 0, 0.9);
-        box-shadow: 0 0 15px #00ff00;
-        margin: 10px 0;
-        text-align: center;
-    }
+    ... rest of your existing CSS ...
 </style>
 """, unsafe_allow_html=True)
 
