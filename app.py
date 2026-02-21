@@ -22,7 +22,9 @@ INCIDENT_FILE = "incidents.json"
 def load_users():
     if os.path.exists(DB_FILE):
         with open(DB_FILE, "r") as f:
-            return json.load(f)
+            content = f.read().strip()
+            if content:
+                return json.loads(content)
     return {}
 
 def save_users(users):
@@ -32,7 +34,9 @@ def save_users(users):
 def load_incidents():
     if os.path.exists(INCIDENT_FILE):
         with open(INCIDENT_FILE, "r") as f:
-            return json.load(f)
+            content = f.read().strip()
+            if content:
+                return json.loads(content)
     return []
 
 def save_incidents(incidents):
