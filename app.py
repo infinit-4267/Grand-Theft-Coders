@@ -64,8 +64,10 @@ try:
         background-attachment: fixed;
     }}
     header[data-testid="stHeader"] {{
-        background: rgba(0,0,0,0) !important;
-    }}
+    height: 0px !important;
+    min-height: 0px !important;
+    visibility: hidden;
+}}
     </style>
     """
 except:
@@ -76,6 +78,13 @@ st.markdown(bg_style, unsafe_allow_html=True)
 # --- NEON CSS ---
 st.markdown("""
 <style>
+/* ADD THESE NEW LINES AT THE TOP */
+    #MainMenu {{ visibility: hidden; }}
+    [data-testid="stToolbar"] {{ display: none !important; }}
+    .stAppDeployButton {{ display: none; }}
+    .stApp > header {{ display: none !important; }}
+    .block-container {{ padding-top: 1rem !important; }}
+
     html, body, [class*="css"] { color: white; font-family: 'Courier New', Courier, monospace; }
     h1 { color: #ff00aa; text-align: center; font-size: 55px; text-shadow: 0 0 20px #ff00aa, 0 0 40px #00ffff; }
     h3 { color: #00ffff; text-shadow: 0 0 10px #00ffff; }
