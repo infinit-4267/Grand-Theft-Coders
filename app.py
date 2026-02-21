@@ -66,6 +66,21 @@ def get_trust_label(trust):
     elif trust >= 45: return ("🟡 NEUTRAL",    "#ffcc00")
     else:             return ("🔴 SUSPICIOUS", "#ff4444")
 
+def recalculate_trust(u):
+    """Bayesian trust: accuracy weighted by confidence from vote count."""
+    v = u.get("verifications", 0)
+    c = u.get("correct_verifications", 0)
+    if v == 0:
+        return 50  # no data → stay neutral
+    accuracy   = c / v
+    confidence = v / (v + 10)   # approaches 1 after ~30 votes; stays low for new users
+    base_trust = 50 * (1 - confidence) + (accuracy * 100) * confidence
+    # streak penalty: last 5 votes all wrong → extra -10
+    recent = u.get("recent_votes", [])[-5:]
+    if len(recent) == 5 and all(r == "wrong" for r in recent):
+        base_trust = max(base_trust - 10, 0)
+    return round(base_trust)
+
 def get_truth_index(incident):
     """Weighted truth index: each vote is weighted by voter's trust factor."""
     votes = incident.get("votes", {})
@@ -212,6 +227,7 @@ if not st.session_state.logged_in:
                     "trust_factor":  50,          # ← NEW: starts neutral
                     "verifications": 0,           # total votes cast
                     "correct_verifications": 0,   # votes that matched consensus
+                    "recent_votes":  [],              # last 20 vote outcomes for streak
                     "join_date":     datetime.now().strftime("%Y-%m-%d"),
                     "history":       [],
                     "last_location": {"lat": 25.7617, "lng": -80.1918}
@@ -232,7 +248,7 @@ else:
     # Back-fill missing fields for old accounts
     for field, val in [("active_list", []), ("xp", 0), ("join_date", datetime.now().strftime("%Y-%m-%d")),
                        ("history", []), ("trust_factor", 50), ("verifications", 0),
-                       ("correct_verifications", 0), ("last_location", {"lat": 25.7617, "lng": -80.1918})]:
+                       ("correct_verifications", 0), ("recent_votes", []), ("last_location", {"lat": 25.7617, "lng": -80.1918})]:
         if field not in user_data:
             user_data[field] = val
 
@@ -702,11 +718,17 @@ else:
                     if vdata.get("trust_resolved"):
                         continue
                     u = users_db[voter]
+                    # track outcome
                     if vdata["vote"] == consensus:
-                        u["trust_factor"] = min(u.get("trust_factor", 50) + 5, 100)
                         u["correct_verifications"] = u.get("correct_verifications", 0) + 1
+                        recent_entry = "correct"
                     else:
-                        u["trust_factor"] = max(u.get("trust_factor", 50) - 7, 0)
+                        recent_entry = "wrong"
+                    recent = u.get("recent_votes", [])
+                    recent.append(recent_entry)
+                    u["recent_votes"] = recent[-20:]
+                    # Bayesian recalculation
+                    u["trust_factor"] = recalculate_trust(u)
                     vdata["trust_resolved"] = True
                     changed = True
                 inc["status"] = "resolved"
@@ -759,5 +781,6 @@ else:
     if current_user in fresh_db:
         user_data['trust_factor'] = fresh_db[current_user].get('trust_factor', user_data.get('trust_factor', 50))
         user_data['correct_verifications'] = fresh_db[current_user].get('correct_verifications', user_data.get('correct_verifications', 0))
+        user_data['recent_votes'] = fresh_db[current_user].get('recent_votes', user_data.get('recent_votes', []))
     fresh_db[current_user] = user_data
     save_users(fresh_db)
