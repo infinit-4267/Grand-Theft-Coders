@@ -688,19 +688,20 @@ else:
         # ── Trust score resolution ────────────
         # After voting, check closed incidents (5+ votes) and update trust
         changed = False
+        users_db = load_users()  # reload fresh before modifying trust
         for inc in incidents:
             if inc.get("status") == "resolved":
                 continue
             votes = inc.get("votes", {})
-            if len(votes) >= 5:
+            if len(votes) >= 3:  # resolve after 3 votes
                 truth = get_truth_index(inc)
                 consensus = "real" if truth >= 50 else "fake"
                 for voter, vdata in votes.items():
                     if voter not in users_db:
                         continue
-                    u = users_db[voter]
                     if vdata.get("trust_resolved"):
                         continue
+                    u = users_db[voter]
                     if vdata["vote"] == consensus:
                         u["trust_factor"] = min(u.get("trust_factor", 50) + 5, 100)
                         u["correct_verifications"] = u.get("correct_verifications", 0) + 1
@@ -713,6 +714,7 @@ else:
         if changed:
             save_incidents(incidents)
             save_users(users_db)
+            user_data = users_db.get(current_user, user_data)
 
         st.divider()
 
@@ -752,6 +754,10 @@ else:
                 unsafe_allow_html=True
             )
 
-    # ── Always persist user_data changes ────
-    users_db[current_user] = user_data
-    save_users(users_db)
+    # ── Always persist user_data changes (merge to avoid overwriting trust updates) ──
+    fresh_db = load_users()
+    if current_user in fresh_db:
+        user_data['trust_factor'] = fresh_db[current_user].get('trust_factor', user_data.get('trust_factor', 50))
+        user_data['correct_verifications'] = fresh_db[current_user].get('correct_verifications', user_data.get('correct_verifications', 0))
+    fresh_db[current_user] = user_data
+    save_users(fresh_db)
