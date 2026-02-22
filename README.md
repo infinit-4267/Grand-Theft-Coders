@@ -1,14 +1,3 @@
----
-title: Vice City Reputation Engine
-emoji: 🌴
-colorFrom: pink
-colorTo: blue
-sdk: streamlit
-sdk_version: "1.32.0"
-python_version: "3.10"
-app_file: app.py
-pinned: false
----
 # 🏙️ Grand-Theft-Coders
 ## 🤖 NPCs with Free Will: Citizen Behavior Modulation
 **Project for Devs of Vice City | Elementos 10.0 Webdev Hackathon** **Thapar Institute of Engineering and Technology**
